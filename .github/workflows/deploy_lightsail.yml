@@ -1,0 +1,40 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+
+    env:
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      HOST_USER: ${{ secrets.HOST_USER }}
+      HOST_IP: ${{ secrets.HOST_IP }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup SSH
+        run: |
+          set -e
+          echo "Setting up SSH..."
+          mkdir -p ~/.ssh
+          echo "$PRIVATE_KEY" | base64 --decode > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -t rsa $HOST_IP >> ~/.ssh/known_hosts
+          echo "SSH setup complete."
+
+      - name: Deploy Changes
+        run: |
+          set -e
+          echo "Deploying changes..."
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $HOST_USER@$HOST_IP '
+            cd Deployment/
+            cat > CONNECTED.txt
+          '
+          echo "Deployment complete."
